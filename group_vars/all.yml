@@ -1,0 +1,94 @@
+---
+# ---------------------------------------------------------------------------
+# User identity (used for dotfiles / git config)
+# ---------------------------------------------------------------------------
+git_user_name: "Matthew Sullivan"
+git_user_email: "matthew.sullivan613@gmail.com"
+git_default_branch: "main"
+
+# The login user this playbook configures. Defaults to the user running it.
+target_user: "{{ ansible_user_id }}"
+target_home: "{{ ansible_env.HOME }}"
+
+# ---------------------------------------------------------------------------
+# common role: base system packages
+# ---------------------------------------------------------------------------
+common_packages:
+  - build-essential
+  - curl
+  - wget
+  - git
+  - unzip
+  - ca-certificates
+  - gnupg
+  - software-properties-common
+  - pkg-config
+  - tmux
+  - htop
+  - tree
+
+# ---------------------------------------------------------------------------
+# cli role: modern command-line tools
+# ---------------------------------------------------------------------------
+# Tools available from the noble apt repos (note Debian binary naming quirks:
+# fd-find -> fdfind, bat -> batcat; aliases are set in the .zshrc template).
+cli_apt_packages:
+  - ripgrep
+  - fd-find
+  - fzf
+  - bat
+  - jq
+  - neovim
+
+# eza is not packaged in noble; install from its official apt repo.
+eza_install: true
+
+# ---------------------------------------------------------------------------
+# shell role: zsh + oh-my-zsh
+# ---------------------------------------------------------------------------
+zsh_theme: "powerlevel10k/powerlevel10k"
+
+# Powerlevel10k theme (installed as an OMZ custom theme). The matching prompt
+# config lives in roles/dotfiles/files/p10k.zsh and is deployed to ~/.p10k.zsh.
+p10k_install: true
+p10k_repo: "https://github.com/romkatv/powerlevel10k"
+
+omz_plugins:
+  - git
+  - fzf
+  - docker
+  - zsh-autosuggestions
+  - zsh-syntax-highlighting
+
+# Custom plugins cloned from GitHub into $ZSH_CUSTOM/plugins
+omz_custom_plugins:
+  - name: zsh-autosuggestions
+    repo: https://github.com/zsh-users/zsh-autosuggestions
+  - name: zsh-syntax-highlighting
+    repo: https://github.com/zsh-users/zsh-syntax-highlighting
+
+# ---------------------------------------------------------------------------
+# languages role
+# ---------------------------------------------------------------------------
+# Node via fnm. Use an fnm alias valid for install AND default/use:
+#   "lts-latest" (latest LTS), "latest", or a major like "20".
+fnm_node_version: "lts-latest"
+# Python via uv
+uv_python_version: "3.12"   # set to "" to skip pre-installing a Python
+# Python CLI tools installed globally via `uv tool install` (each gets an
+# isolated env + a shim in ~/.local/bin). Assumes the executable name matches
+# the package name.
+uv_tools:
+  - virtualenv
+
+# ---------------------------------------------------------------------------
+# docker role
+# ---------------------------------------------------------------------------
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin
+# Enable systemd in WSL via /etc/wsl.conf (required for the docker service)
+wsl_enable_systemd: true

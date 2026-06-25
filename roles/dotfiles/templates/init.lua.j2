@@ -1,0 +1,26 @@
+-- {{ ansible_managed }}
+-- Minimal Neovim starter config. Grow as needed.
+
+local opt = vim.opt
+
+opt.number = true
+opt.relativenumber = true
+opt.expandtab = true
+opt.shiftwidth = 2
+opt.tabstop = 2
+opt.smartindent = true
+opt.ignorecase = true
+opt.smartcase = true
+opt.termguicolors = true
+opt.scrolloff = 8
+opt.clipboard = "unnamedplus"
+opt.undofile = true
+
+vim.g.mapleader = " "
+
+-- Quick save / quit
+vim.keymap.set("n", "<leader>w", "<cmd>write<cr>", { desc = "Save" })
+vim.keymap.set("n", "<leader>q", "<cmd>quit<cr>", { desc = "Quit" })
+
+-- Clear search highlight
+vim.keymap.set("n", "<Esc>", "<cmd>nohlsearch<cr>")

@@ -1,0 +1,56 @@
+---
+# --- fnm (Fast Node Manager) -----------------------------------------------
+- name: Check whether fnm is installed
+  ansible.builtin.stat:
+    path: "{{ target_home }}/.local/share/fnm/fnm"
+  register: fnm_bin
+
+- name: Install fnm
+  when: not fnm_bin.stat.exists
+  ansible.builtin.shell:
+    cmd: >
+      curl -fsSL https://fnm.vercel.app/install |
+      bash -s -- --install-dir "{{ target_home }}/.local/share/fnm" --skip-shell
+  args:
+    creates: "{{ target_home }}/.local/share/fnm/fnm"
+
+- name: Install Node via fnm
+  ansible.builtin.shell:
+    cmd: >
+      eval "$({{ target_home }}/.local/share/fnm/fnm env)" &&
+      {{ target_home }}/.local/share/fnm/fnm install {{ fnm_node_version }} &&
+      {{ target_home }}/.local/share/fnm/fnm default {{ fnm_node_version }}
+    executable: /bin/bash
+  register: fnm_node
+  # fnm prints "Installing Node vX" even when already present, so the reliable
+  # signal for an actual install is the *absence* of the "already installed"
+  # warning. (`fnm default` is silent and idempotent.)
+  changed_when: "'already installed' not in (fnm_node.stdout + fnm_node.stderr)"
+
+# --- uv (Python package/version manager) -----------------------------------
+- name: Check whether uv is installed
+  ansible.builtin.stat:
+    path: "{{ target_home }}/.local/bin/uv"
+  register: uv_bin
+
+- name: Install uv
+  when: not uv_bin.stat.exists
+  ansible.builtin.shell:
+    cmd: curl -fsSL https://astral.sh/uv/install.sh | sh
+  environment:
+    UV_INSTALL_DIR: "{{ target_home }}/.local/bin"
+  args:
+    creates: "{{ target_home }}/.local/bin/uv"
+
+- name: Pre-install a Python toolchain via uv
+  when: uv_python_version | length > 0
+  ansible.builtin.command:
+    cmd: "{{ target_home }}/.local/bin/uv python install {{ uv_python_version }}"
+  register: uv_python
+  changed_when: "'Installed' in uv_python.stdout or 'Installed' in uv_python.stderr"
+
+- name: Install Python CLI tools via uv (e.g. virtualenv)
+  ansible.builtin.command:
+    cmd: "{{ target_home }}/.local/bin/uv tool install {{ item }}"
+    creates: "{{ target_home }}/.local/bin/{{ item }}"
+  loop: "{{ uv_tools }}"

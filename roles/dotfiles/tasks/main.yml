@@ -1,0 +1,32 @@
+---
+- name: Ensure config directories exist
+  ansible.builtin.file:
+    path: "{{ target_home }}/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - .config
+    - .config/nvim
+    - .local/bin
+
+- name: Render dotfiles
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ target_home }}/{{ item.dest }}"
+    mode: "{{ item.mode | default('0644') }}"
+    backup: true
+  loop:
+    - { src: zshrc.j2, dest: .zshrc }
+    - { src: gitconfig.j2, dest: .gitconfig }
+    - { src: tmux.conf.j2, dest: .tmux.conf }
+    - { src: init.lua.j2, dest: .config/nvim/init.lua }
+  loop_control:
+    label: "{{ item.dest }}"
+
+- name: Deploy Powerlevel10k prompt config
+  when: p10k_install | default(false) | bool
+  ansible.builtin.copy:
+    src: p10k.zsh
+    dest: "{{ target_home }}/.p10k.zsh"
+    mode: "0644"
+    backup: true

@@ -1,0 +1,49 @@
+---
+- name: Install zsh
+  become: true
+  ansible.builtin.apt:
+    name: zsh
+    state: present
+
+- name: Check whether Oh My Zsh is already installed
+  ansible.builtin.stat:
+    path: "{{ target_home }}/.oh-my-zsh"
+  register: omz_dir
+
+- name: Install Oh My Zsh (unattended)
+  when: not omz_dir.stat.exists
+  ansible.builtin.shell:
+    cmd: >
+      sh -c "$(curl -fsSL
+      https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+      "" --unattended
+  environment:
+    RUNZSH: "no"
+    CHSH: "no"
+    KEEP_ZSHRC: "yes"
+  args:
+    creates: "{{ target_home }}/.oh-my-zsh"
+
+- name: Install custom Oh My Zsh plugins
+  ansible.builtin.git:
+    repo: "{{ item.repo }}"
+    dest: "{{ target_home }}/.oh-my-zsh/custom/plugins/{{ item.name }}"
+    depth: 1
+    version: master
+  loop: "{{ omz_custom_plugins }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Install Powerlevel10k theme
+  when: p10k_install | bool
+  ansible.builtin.git:
+    repo: "{{ p10k_repo }}"
+    dest: "{{ target_home }}/.oh-my-zsh/custom/themes/powerlevel10k"
+    depth: 1
+    version: master
+
+- name: Set zsh as the default login shell
+  become: true
+  ansible.builtin.user:
+    name: "{{ target_user }}"
+    shell: /usr/bin/zsh

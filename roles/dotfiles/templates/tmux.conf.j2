@@ -1,0 +1,31 @@
+# {{ ansible_managed }}
+
+# Use a more ergonomic prefix
+set -g prefix C-a
+unbind C-b
+bind C-a send-prefix
+
+# Sane defaults
+set -g mouse on
+set -g base-index 1
+setw -g pane-base-index 1
+set -g renumber-windows on
+set -g history-limit 10000
+set -g default-terminal "tmux-256color"
+set -ga terminal-overrides ",*256col*:Tc"
+set -sg escape-time 10
+
+# Split panes with | and -
+bind | split-window -h -c "#{pane_current_path}"
+bind - split-window -v -c "#{pane_current_path}"
+unbind '"'
+unbind %
+
+# Reload config
+bind r source-file ~/.tmux.conf \; display-message "tmux.conf reloaded"
+
+# Vim-style pane navigation
+bind h select-pane -L
+bind j select-pane -D
+bind k select-pane -U
+bind l select-pane -R

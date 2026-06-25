@@ -1,0 +1,40 @@
+---
+- name: Install CLI tools from apt
+  become: true
+  ansible.builtin.apt:
+    name: "{{ cli_apt_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+# --- eza (modern ls), not packaged in noble apt ----------------------------
+- name: Install eza from its official apt repo
+  when: eza_install | bool
+  block:
+    - name: Ensure keyrings directory exists
+      become: true
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Add eza apt signing key
+      become: true
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/eza-community/eza/main/deb.asc
+        dest: /etc/apt/keyrings/gierens.asc
+        mode: "0644"
+
+    - name: Add eza apt repository
+      become: true
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/gierens.asc] http://deb.gierens.de stable main"
+        filename: gierens
+        state: present
+
+    - name: Install eza
+      become: true
+      ansible.builtin.apt:
+        name: eza
+        state: present
+        update_cache: true

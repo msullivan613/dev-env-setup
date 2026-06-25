@@ -1,0 +1,68 @@
+---
+# --- Enable systemd in WSL (required for the docker service) ----------------
+- name: Enable systemd in /etc/wsl.conf
+  when: wsl_enable_systemd | bool
+  become: true
+  ansible.builtin.template:
+    src: wsl.conf.j2
+    dest: /etc/wsl.conf
+    mode: "0644"
+  register: wslconf
+
+# --- Docker apt repository --------------------------------------------------
+- name: Ensure keyrings directory exists
+  become: true
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Add Docker's official GPG key
+  become: true
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: "0644"
+
+- name: Add Docker apt repository
+  become: true
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }}
+      signed-by=/etc/apt/keyrings/docker.asc]
+      https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
+    filename: docker
+    state: present
+
+- name: Install Docker engine and plugins
+  become: true
+  ansible.builtin.apt:
+    name: "{{ docker_packages }}"
+    state: present
+    update_cache: true
+
+# --- User access ------------------------------------------------------------
+- name: Add user to the docker group
+  become: true
+  ansible.builtin.user:
+    name: "{{ target_user }}"
+    groups: docker
+    append: true
+
+# --- Service ----------------------------------------------------------------
+- name: Enable and start the docker service
+  become: true
+  ansible.builtin.systemd:
+    name: docker
+    enabled: true
+    state: started
+  when: ansible_service_mgr == 'systemd'
+
+- name: Warn if systemd is not active yet
+  ansible.builtin.debug:
+    msg: >-
+      systemd is not running as init yet. /etc/wsl.conf has been configured.
+      Run `wsl --shutdown` from Windows PowerShell, then reopen your WSL
+      terminal and re-run this playbook (or `./bootstrap.sh --tags docker`) so
+      the docker service can be started.
+  when: ansible_service_mgr != 'systemd'
