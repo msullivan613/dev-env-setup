@@ -91,6 +91,6 @@
     state: directory
     mode: "0755"
 - name: Create lazygit config
-  ansible.builtin.file:
+  ansible.builtin.copy:
     src: lazygit-config.yml
-    dest: "{{ target_home }}/.config/lazygit/.config.yml"
+    dest: "{{ target_home }}/.config/lazygit/config.yml"
