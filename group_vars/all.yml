@@ -47,6 +47,7 @@ cli_apt_packages:
   - jq
   - neovim
   - micro
+  - git-delta
 
 # eza is not packaged in noble; install from its official apt repo.
 eza_install: true

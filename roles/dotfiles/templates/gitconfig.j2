@@ -17,8 +17,9 @@
 	prune = true
 
 [core]
-	editor = nvim
+	editor = micro
 	autocrlf = input
+	pager = delta
 
 [color]
 	ui = auto
@@ -31,3 +32,13 @@
 	lg = log --oneline --graph --decorate --all
 	last = log -1 HEAD
 	unstage = reset HEAD --
+
+[interactive]
+	diffFilter = delta --color-only
+
+[delta]
+	navigate = true
+	side-by-side = true
+
+[merge]
+	conflictstyle = diff3
