@@ -51,6 +51,13 @@ cli_apt_packages:
 # eza is not packaged in noble; install from its official apt repo.
 eza_install: true
 
+# lazygit is not packaged in noble and has no official apt repo; install the
+# release binary from GitHub into ~/.local/bin (user-space, like fnm/uv).
+# "latest" resolves the newest release at run time and upgrades in place if the
+# installed binary is older; pin to a specific version (e.g. "0.62.2") to hold.
+lazygit_install: true
+lazygit_version: "latest"
+
 # ---------------------------------------------------------------------------
 # shell role: zsh + oh-my-zsh
 # ---------------------------------------------------------------------------

@@ -38,3 +38,50 @@
         name: eza
         state: present
         update_cache: true
+
+# --- lazygit, not packaged in noble apt and no official apt repo -----------
+# Resolve the desired version ("latest" -> newest GitHub release), compare with
+# what's installed, and (re)install only when they differ — so re-runs upgrade
+# in place but stay idempotent once current.
+- name: Install lazygit release binary into ~/.local/bin
+  when: lazygit_install | bool
+  block:
+    - name: Ensure ~/.local/bin exists
+      ansible.builtin.file:
+        path: "{{ target_home }}/.local/bin"
+        state: directory
+        mode: "0755"
+
+    - name: Resolve latest lazygit release version
+      when: lazygit_version == "latest"
+      ansible.builtin.uri:
+        url: https://api.github.com/repos/jesseduffield/lazygit/releases/latest
+        return_content: true
+      register: lazygit_release
+
+    - name: Determine desired lazygit version
+      ansible.builtin.set_fact:
+        lazygit_desired_version: >-
+          {{ (lazygit_release.json.tag_name | regex_replace('^v', ''))
+             if lazygit_version == 'latest' else lazygit_version }}
+
+    - name: Check installed lazygit version
+      ansible.builtin.command: "{{ target_home }}/.local/bin/lazygit --version"
+      register: lazygit_installed
+      changed_when: false
+      failed_when: false
+
+    - name: Determine installed lazygit version
+      ansible.builtin.set_fact:
+        lazygit_current_version: >-
+          {{ (lazygit_installed.stdout | regex_search('version=([0-9]+\.[0-9]+\.[0-9]+)', '\1') | first)
+             if lazygit_installed.rc == 0 else '' }}
+
+    - name: Install lazygit {{ lazygit_desired_version }}
+      when: lazygit_current_version != lazygit_desired_version
+      ansible.builtin.unarchive:
+        src: "https://github.com/jesseduffield/lazygit/releases/download/v{{ lazygit_desired_version }}/lazygit_{{ lazygit_desired_version }}_Linux_{{ 'arm64' if ansible_architecture == 'aarch64' else 'x86_64' }}.tar.gz"
+        dest: "{{ target_home }}/.local/bin"
+        include:
+          - lazygit
+        remote_src: true

@@ -20,7 +20,7 @@ cd ~/dev-env-setup
 | Role        | Contents |
 |-------------|----------|
 | `common`    | apt update/upgrade, `build-essential`, core utilities |
-| `cli`       | ripgrep, fd, fzf, bat, jq, neovim, eza |
+| `cli`       | ripgrep, fd, fzf, bat, jq, neovim, micro, eza, [lazygit](https://github.com/jesseduffield/lazygit) |
 | `shell`     | zsh + Oh My Zsh (autosuggestions, syntax-highlighting), Powerlevel10k theme, default shell |
 | `languages` | Node via [fnm](https://github.com/Schniz/fnm), Python via [uv](https://github.com/astral-sh/uv), `virtualenv` (uv-installed CLI) |
 | `docker`    | docker-ce engine + compose/buildx plugins, docker group, systemd in WSL |
@@ -87,6 +87,11 @@ docker run --rm hello-world
 The playbook is safe to re-run; every external installer (Oh My Zsh, fnm, uv,
 Docker key/repo) is guarded, so a second run reports no changes. Re-running is
 the intended way to apply updates after editing `group_vars/all.yml`.
+
+One exception by design: with `lazygit_version: "latest"` (the default), the
+`cli` role resolves the newest GitHub release at run time and upgrades the
+binary in place if the installed one is older — so re-running keeps lazygit
+current. Pin `lazygit_version` to a specific version to hold it.
 
 ## Not included (yet)
 

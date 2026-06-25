@@ -90,6 +90,12 @@ user-agnostic.
   custom `changed_when:` expressions where an installer's output is the only signal
   (see the fnm "already installed" check and the uv "Installed" checks in
   `roles/languages/tasks/main.yml`). Match one of these when adding install steps.
+- **GitHub-release binaries** (lazygit) that aren't in apt and have no apt repo
+  install into `~/.local/bin` (user-space, like fnm/uv). lazygit additionally
+  self-updates: with `lazygit_version: "latest"` the role queries the releases
+  API, parses the installed binary's `--version`, and `unarchive`s only when the
+  two differ — so re-runs upgrade in place yet stay idempotent once current.
+  Pin `lazygit_version` to hold a specific version.
 - **Third-party apt repos** (docker, eza) follow a fixed shape: ensure
   `/etc/apt/keyrings`, fetch the signing key there, add the repo with
   `signed-by=`, then `apt: update_cache: true`. Copy this pattern rather than
