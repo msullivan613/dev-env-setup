@@ -12,19 +12,28 @@ hosts) — `inventory.ini` maps the `local` group to `localhost` via
 ## Commands
 
 ```bash
-./bootstrap.sh                      # install Ansible if missing, then run everything (prompts for sudo)
+./bootstrap.sh                      # install Ansible if missing, then run everything
 ./bootstrap.sh --tags shell,cli     # run only selected roles
 ./bootstrap.sh --check              # dry run, no changes
 ./bootstrap.sh --tags docker        # re-run a single role
 
-# Direct invocation once Ansible is installed (-K = --ask-become-pass):
-ansible-playbook -i inventory.ini site.yml -K
+# Direct invocation once Ansible is installed. bootstrap.sh primes the sudo
+# credential cache first (sudo -v), so it runs without -K; do the same here if
+# your sudo timestamp isn't already warm:
+sudo -v && ansible-playbook -i inventory.ini site.yml
 ```
 
+`bootstrap.sh` deliberately does **not** pass `--ask-become-pass`. That flag
+feeds a password to sudo over stdin, which breaks when sudo authenticates some
+other way (e.g. a YubiKey touch via pam_u2f). Instead the script runs `sudo -v`
+once up front — honoring whatever PAM requires — and keeps the sudo timestamp
+alive with a background refresher for the duration of the run; Ansible's
+`become` rides that cached credential.
+
 Any extra args to `bootstrap.sh` are forwarded verbatim to `ansible-playbook`
-(see the final `exec` line). There is no separate test suite; `--check` is the
-closest thing to a validation pass, and re-running should report zero changes
-(idempotency is the correctness contract — see below).
+(see the final `ansible-playbook` line). There is no separate test suite;
+`--check` is the closest thing to a validation pass, and re-running should
+report zero changes (idempotency is the correctness contract — see below).
 
 ## Architecture
 
@@ -54,8 +63,11 @@ the earlier roles installed.
   regenerates that file, so it too is only seeded once and never clobbered.
 
 `ansible.cfg` sets `become = False` globally; privilege escalation is opt-in
-per-task via `become: true`. The single become password comes from
-`--ask-become-pass`.
+per-task via `become: true`. There is no become password — sudo auth happens
+out of band via the pre-primed credential cache (see the bootstrap note above),
+so `become` calls succeed non-interactively. The `common` role can also grant
+the target user passwordless sudo (`sudo_nopasswd`, default off) for runs that
+shouldn't depend on a warm timestamp at all.
 
 `target_user` / `target_home` default to the invoking user (`ansible_user_id` /
 `ansible_env.HOME`) — tasks use these vars rather than `~` so the playbook stays

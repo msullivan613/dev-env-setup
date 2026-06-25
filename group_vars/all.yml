@@ -10,6 +10,13 @@ git_default_branch: "main"
 target_user: "{{ ansible_user_id }}"
 target_home: "{{ ansible_env.HOME }}"
 
+# Ensure target_user has sudo rights (membership in the 'sudo' group).
+sudo_grant: true
+# Also grant passwordless sudo via a /etc/sudoers.d drop-in. Off by default —
+# this is a convenience/security tradeoff; flip to true to stop typing the
+# password (note the playbook itself still needs -K / --ask-become-pass).
+sudo_nopasswd: false
+
 # ---------------------------------------------------------------------------
 # common role: base system packages
 # ---------------------------------------------------------------------------

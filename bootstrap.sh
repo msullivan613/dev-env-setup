@@ -3,6 +3,8 @@
 # bootstrap.sh — entrypoint for a fresh machine.
 #
 # Installs Ansible (if missing) and runs the playbook against localhost.
+# Primes the sudo credential cache up front (works with password or YubiKey
+# sudo), so the playbook runs without --ask-become-pass.
 #
 # Usage:
 #   git clone <repo> ~/dev-env-setup
@@ -43,6 +45,24 @@ else
   log "Ansible already installed: $(ansible --version | head -n1)"
 fi
 
+# --- Authenticate sudo ------------------------------------------------------
+# We don't pass --ask-become-pass to ansible-playbook: that makes Ansible feed
+# a password to sudo over stdin, which breaks where sudo authenticates some
+# other way (e.g. a YubiKey touch via pam_u2f). Instead, prime sudo's
+# credential cache interactively here — this honors whatever PAM requires
+# (password, touch, etc.) — then let Ansible's become ride the cached
+# timestamp. A background refresher keeps the timestamp alive so a long run
+# doesn't expire mid-playbook.
+log "Authenticating sudo (touch your security key / enter your password if prompted)..."
+sudo -v
+
+while true; do
+  sudo -n true 2>/dev/null || exit
+  sleep 50
+done &
+SUDO_KEEPALIVE_PID=$!
+trap 'kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true' EXIT
+
 # --- Run the playbook -------------------------------------------------------
-log "Running playbook (you will be prompted for your sudo/BECOME password)..."
-exec ansible-playbook -i inventory.ini site.yml --ask-become-pass "$@"
+log "Running playbook..."
+ansible-playbook -i inventory.ini site.yml "$@"

@@ -15,3 +15,22 @@
   ansible.builtin.apt:
     name: "{{ common_packages }}"
     state: present
+
+- name: Add user to the sudo group
+  become: true
+  ansible.builtin.user:
+    name: "{{ target_user }}"
+    groups: sudo
+    append: true
+  when: sudo_grant | bool
+
+- name: Grant passwordless sudo
+  become: true
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/90-{{ target_user }}-nopasswd"
+    content: "{{ target_user }} ALL=(ALL) NOPASSWD:ALL\n"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "visudo -cf %s"
+  when: sudo_nopasswd | bool
