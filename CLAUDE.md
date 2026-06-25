@@ -38,11 +38,20 @@ the earlier roles installed.
   the WSL/docker toggles. Roles read these vars; don't hardcode values into role
   tasks.
 - `roles/<name>/tasks/main.yml` — the actual work for each role.
-- `roles/dotfiles/templates/*.j2` — Jinja2-rendered dotfiles (`.zshrc`,
-  `.gitconfig`, `.tmux.conf`, `nvim/init.lua`). These pull from `group_vars`, so
-  e.g. git identity flows from `git_user_name`/`git_user_email` into `gitconfig.j2`.
+- `roles/dotfiles/templates/*.j2` — Jinja2-rendered config fragments. These pull
+  from `group_vars`, so e.g. git identity flows from `git_user_name`/
+  `git_user_email` into `gitconfig.j2`. **The dotfiles role never overwrites the
+  files in `$HOME`.** It renders the managed content into a separate location
+  that the playbook fully owns and overwrites every run — `~/.config/dev-env/`
+  (`zshrc.zsh`, `gitconfig`, `tmux.conf`) and `~/.config/nvim/dev-env.lua`. The
+  real dotfiles (`~/.zshrc`, `~/.gitconfig`, `~/.tmux.conf`, `~/.config/nvim/
+  init.lua`) are thin **stubs** that source/include those fragments (zsh
+  `source`, git `[include]`, tmux `source-file`, nvim `dofile`). Stubs are
+  written with `force: false`, so they're created once and then belong to the
+  user — anything added below the managed line survives re-runs.
 - `roles/dotfiles/files/p10k.zsh` — the Powerlevel10k prompt config, deployed
-  verbatim (not templated) to `~/.p10k.zsh`.
+  verbatim (not templated) to `~/.p10k.zsh` with `force: false`. `p10k configure`
+  regenerates that file, so it too is only seeded once and never clobbered.
 
 `ansible.cfg` sets `become = False` globally; privilege escalation is opt-in
 per-task via `become: true`. The single become password comes from

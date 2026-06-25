@@ -1,4 +1,9 @@
 ---
+# Strategy: the playbook fully owns a set of "managed" config fragments and
+# overwrites them on every run. The real dotfiles in $HOME are thin stubs that
+# source/include those fragments — they are created ONCE and never touched
+# again, so anything you add to them after the first run survives forever.
+
 - name: Ensure config directories exist
   ansible.builtin.file:
     path: "{{ target_home }}/{{ item }}"
@@ -6,27 +11,67 @@
     mode: "0755"
   loop:
     - .config
+    - .config/dev-env
     - .config/nvim
     - .local/bin
 
-- name: Render dotfiles
+# ---------------------------------------------------------------------------
+# Managed fragments — rendered from group_vars, overwritten every run.
+# ---------------------------------------------------------------------------
+- name: Render managed dotfile fragments
   ansible.builtin.template:
     src: "{{ item.src }}"
     dest: "{{ target_home }}/{{ item.dest }}"
     mode: "{{ item.mode | default('0644') }}"
     backup: true
   loop:
-    - { src: zshrc.j2, dest: .zshrc }
-    - { src: gitconfig.j2, dest: .gitconfig }
-    - { src: tmux.conf.j2, dest: .tmux.conf }
-    - { src: init.lua.j2, dest: .config/nvim/init.lua }
+    - { src: zshrc.j2, dest: .config/dev-env/zshrc.zsh }
+    - { src: gitconfig.j2, dest: .config/dev-env/gitconfig }
+    - { src: tmux.conf.j2, dest: .config/dev-env/tmux.conf }
+    - { src: init.lua.j2, dest: .config/nvim/dev-env.lua }
   loop_control:
     label: "{{ item.dest }}"
 
-- name: Deploy Powerlevel10k prompt config
+# ---------------------------------------------------------------------------
+# User-facing stubs — created once, then yours to edit. force:false means the
+# stub is only written when it does not already exist, so manual additions are
+# never clobbered on re-runs.
+# ---------------------------------------------------------------------------
+- name: Create user dotfile stubs (only if missing)
+  ansible.builtin.copy:
+    dest: "{{ target_home }}/{{ item.dest }}"
+    content: "{{ item.content }}"
+    mode: "0644"
+    force: false
+  loop:
+    - dest: .zshrc
+      content: |
+        # Managed dev-env config. Keep this source line; add your own settings below.
+        [ -r "$HOME/.config/dev-env/zshrc.zsh" ] && source "$HOME/.config/dev-env/zshrc.zsh"
+    - dest: .gitconfig
+      content: |
+        # Managed dev-env config. Settings below this include override the managed ones.
+        [include]
+        	path = ~/.config/dev-env/gitconfig
+    - dest: .tmux.conf
+      content: |
+        # Managed dev-env config. Add your own settings below.
+        source-file ~/.config/dev-env/tmux.conf
+    - dest: .config/nvim/init.lua
+      content: |
+        -- Managed dev-env config. Add your own settings below.
+        dofile(vim.fn.stdpath("config") .. "/dev-env.lua")
+  loop_control:
+    label: "{{ item.dest }}"
+
+# ---------------------------------------------------------------------------
+# Powerlevel10k prompt config — deployed once. `p10k configure` regenerates
+# ~/.p10k.zsh, so force:false keeps your customised prompt across re-runs.
+# ---------------------------------------------------------------------------
+- name: Deploy Powerlevel10k prompt config (only if missing)
   when: p10k_install | default(false) | bool
   ansible.builtin.copy:
     src: p10k.zsh
     dest: "{{ target_home }}/.p10k.zsh"
     mode: "0644"
-    backup: true
+    force: false
