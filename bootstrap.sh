@@ -45,6 +45,19 @@ else
   log "Ansible already installed: $(ansible --version | head -n1)"
 fi
 
+# --- Pick an available stdout callback --------------------------------------
+# ansible.cfg requests the prettier `yaml` callback, which ships in the
+# community.general collection. A minimal ansible-core install (e.g. a venv)
+# won't have it, so Ansible prints a "callback plugin yaml cannot be loaded"
+# warning and falls back anyway. Detect that case and select the built-in
+# `default` callback explicitly (env var overrides ansible.cfg) to keep the
+# output clean. Install community.general if you want the yaml output here:
+#   ansible-galaxy collection install community.general
+if [ -z "$(ansible-doc -t callback community.general.yaml 2>/dev/null)" ]; then
+  log "yaml callback unavailable (no community.general) — using built-in 'default' output."
+  export ANSIBLE_STDOUT_CALLBACK=default
+fi
+
 # --- Authenticate sudo ------------------------------------------------------
 # We don't pass --ask-become-pass to ansible-playbook: that makes Ansible feed
 # a password to sudo over stdin, which breaks where sudo authenticates some

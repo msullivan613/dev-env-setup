@@ -30,6 +30,15 @@ once up front — honoring whatever PAM requires — and keeps the sudo timestam
 alive with a background refresher for the duration of the run; Ansible's
 `become` rides that cached credential.
 
+`ansible.cfg` sets `stdout_callback = yaml`, which lives in the
+`community.general` collection — present with apt's `ansible` package but not in
+a minimal `ansible-core` install (e.g. a venv). `bootstrap.sh` probes for it and
+falls back to the built-in `default` callback (via `ANSIBLE_STDOUT_CALLBACK`)
+when absent, so no "callback plugin yaml cannot be loaded" warning. For direct
+`ansible-playbook` invocation on such a host, either export the same env var or
+`ansible-galaxy collection install community.general`. No role uses any
+`community.general` module, so the collection is otherwise optional.
+
 Any extra args to `bootstrap.sh` are forwarded verbatim to `ansible-playbook`
 (see the final `ansible-playbook` line). There is no separate test suite;
 `--check` is the closest thing to a validation pass, and re-running should
