@@ -85,3 +85,12 @@
         include:
           - lazygit
         remote_src: true
+- name: Ensure lazygit config directory exists
+  ansible.builtin.file:
+    path: "{{ target_home }}/.config/lazygit"
+    state: directory
+    mode: "0755"
+- name: Create lazygit config
+  ansible.builtin.file:
+    src: lazygit-config.yml
+    dest: "{{ target_home }}/.config/lazygit/.config.yml"
